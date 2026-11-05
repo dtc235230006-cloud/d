@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Education Spatial Analytics — Phân Cụm Điểm Thi Tiếng Anh THPT</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans (Editorial UI) & JetBrains Mono (Tabular Data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 & Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Leaflet & Plotly -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
+
+    <style>
+        :root {
+            /* Typography */
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            /* Color Palette: Porcelain White - Deep Navy - Terracotta Accent */
+            --bg-canvas: #F9F9F6;
+            --bg-surface: #FFFFFF;
+            --bg-subtle: #F3F2EE;
+            --border-hairline: #E6E4DD;
+            --border-focus: #0B132B;
+
+            --text-primary: #0B132B;
+            --text-secondary: #4A5268;
+            --text-muted: #848C9E;
+
+            --accent-navy: #0B132B;
+            --accent-navy-hover: #1C2541;
+            --accent-terracotta: #C85A32;
+            --accent-terracotta-soft: #FDF3EF;
+            --accent-sage: #2A9D8F;
+            --accent-crimson: #B53838;
+
+            /* Elevation & Radii */
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-soft: 0 4px 24px -4px rgba(11, 19, 43, 0.035), 0 1px 3px -1px rgba(11, 19, 43, 0.02);
+            --shadow-hover: 0 12px 32px -8px rgba(11, 19, 43, 0.07), 0 2px 6px -1px rgba(11, 19, 43, 0.03);
+            --transition-smooth: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body {
+            background-color: var(--bg-canvas);
+            font-family: var(--font-sans);
+            color: var(--text-secondary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            line-height: 1.6;
+            padding-bottom: 5rem;
+        }
+
+        /* 1. LAYOUT & 12-COLUMN EDITORIAL GRID */
+        .editorial-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 3.5rem 3rem;
+        }
+
+        @media (max-width: 992px) {
+            .editorial-container {
+                padding: 2rem 1.5rem;
+            }
+        }
+
+        .grid-12 {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+
+        .col-span-12 { grid-column: span 12; }
+        .col-span-8  { grid-column: span 8; }
+        .col-span-6  { grid-column: span 6; }
+        .col-span-4  { grid-column: span 4; }
+        .col-span-3  { grid-column: span 3; }
+        .col-span-2  { grid-column: span 2; }
+        .col-span-1  { grid-column: span 1; }
+
+        @media (max-width: 1200px) {
+            .col-span-8, .col-span-4 { grid-column: span 12; }
+            .col-span-3, .col-span-2, .col-span-1 { grid-column: span 6; }
+        }
+        @media (max-width: 768px) {
+            .col-span-6, .col-span-3, .col-span-2, .col-span-1 { grid-column: span 12; }
+        }
+
+        /* 2. EDITORIAL TYPOGRAPHY */
+        .eyebrow-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        .editorial-headline {
+            font-size: clamp(1.85rem, 2.5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.035em;
+            line-height: 1.15;
+            margin: 0;
+        }
+
+        .editorial-subheadline {
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin: 0;
+        }
+
+        .num-mono {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 3. SURFACE CARDS & BORDERS */
+        .surface-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-hairline);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            transition: var(--transition-smooth);
+        }
+
+        .surface-card-padded {
+            padding: 2.25rem;
+        }
+
+        /* 4. MINIMALIST KPI ARCHITECTURE */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-hairline);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            margin-bottom: 2.5rem;
+        }
+
+        .kpi-cell {
+            grid-column: span 3;
+            padding: 2rem 2.25rem;
+            border-right: 1px solid var(--border-hairline);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: background-color 0.2s ease;
+        }
+
+        .kpi-cell:last-child {
+            border-right: none;
+        }
+
+        .kpi-cell:hover {
+            background-color: #FCFBF9;
+        }
+
+        @media (max-width: 992px) {
+            .kpi-cell {
+                grid-column: span 6;
+                border-bottom: 1px solid var(--border-hairline);
+            }
+        }
+        @media (max-width: 576px) {
+            .kpi-cell {
+                grid-column: span 12;
+                border-right: none;
+            }
+        }
+
+        .kpi-value {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            font-size: 2.35rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin: 0.65rem 0;
+        }
+
+        .kpi-value.accent-terracotta { color: var(--accent-terracotta); }
+        .kpi-value.accent-sage { color: var(--accent-sage); }
+
+        .kpi-footnote {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            background-color: var(--accent-navy);
+        }
+
+        /* 5. FORM CONTROLS & BUTTONS */
+        .form-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control, .form-select {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-hairline);
+            border-radius: var(--radius-md);
+            padding: 0.68rem 0.95rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+            box-shadow: none;
+        }
+
+        .form-control:hover:not(:disabled), .form-select:hover:not(:disabled) {
+            border-color: #C5C2B8;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--bg-surface);
+            border-color: var(--accent-navy);
+            box-shadow: 0 0 0 3px rgba(11, 19, 43, 0.06);
+        }
+
+        .form-control:disabled, .form-select:disabled {
+            background-color: var(--bg-subtle);
+            color: var(--text-muted);
+            border-color: var(--border-hairline);
+            cursor: not-allowed;
+        }
+
+        .btn-primary-editorial {
+            background: var(--accent-navy);
+            color: #FFFFFF;
+            border: 1px solid var(--accent-navy);
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-radius: var(--radius-md);
+            padding: 0.68rem 1.4rem;
+            letter-spacing: -0.01em;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-primary-editorial:hover:not(:disabled) {
+            background: var(--accent-navy-hover);
+            color: #FFFFFF;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -4px rgba(11, 19, 43, 0.25);
+        }
+
+        .btn-primary-editorial:disabled {
+            background: var(--bg-subtle);
+            border-color: var(--border-hairline);
+            color: var(--text-muted);
+        }
+
+        .btn-ghost-editorial {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-hairline);
+            border-radius: 999px;
+            padding: 0.45rem 1.1rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-ghost-editorial:hover {
+            background: var(--bg-subtle);
+            border-color: #C5C2B8;
+        }
+
+        /* 6. APPLE-STYLE SEGMENTED NAVIGATION */
+        .segmented-nav {
+            background-color: var(--bg-subtle);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            border: 1px solid var(--border-hairline);
+        }
+
+        .segmented-nav .nav-link {
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.55rem 1.15rem;
+            border-radius: 9px;
+            background: transparent;
+            transition: var(--transition-smooth);
+            letter-spacing: -0.01em;
+        }
+
+        .segmented-nav .nav-link:hover {
+            color: var(--text-primary);
+        }
+
+        .segmented-nav .nav-link.active {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(11, 19, 43, 0.06), 0 1px 2px rgba(11, 19, 43, 0.04);
+        }
+
+        .tab-index-num {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--accent-terracotta);
+            margin-right: 0.35rem;
+            font-weight: 600;
+        }
+
+        /* 7. TABLES & DATA GRID */
+        .table-editorial {
+            margin-bottom: 0;
+            font-size: 0.84rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-editorial thead th {
+            background-color: #FAF9F5;
+            color: var(--text-muted);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-hairline);
+            border-top: none;
+        }
+
+        .table-editorial tbody td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid #F1EFEA;
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        .table-editorial tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-editorial tbody tr:hover td {
+            background-color: #FCFBF9;
+        }
+
+        /* 8. MAP & CHARTS */
+        #map {
+            height: 660px;
+            width: 100%;
+            border-radius: var(--radius-md);
+            background-color: #F2F0EA;
+        }
+
+        .chart-card {
+            min-height: 430px;
+            width: 100%;
+        }
+
+        path.leaflet-interactive:focus,
+        .leaflet-container path:focus,
+        .leaflet-interactive:focus,
+        svg:focus,
+        g:focus {
+            outline: none !important;
+        }
+
+        /* Floating Translucent Controls */
+        .glass-box {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-hairline);
+            box-shadow: var(--shadow-hover);
+            border-radius: var(--radius-md);
+        }
+
+        /* Subtle Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-canvas); }
+        ::-webkit-scrollbar-thumb { background: #D5D2C8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #B8B4A8; }
+    </style>
+</head>
+<body>
+
+<div class="editorial-container">
+    <!-- EDITORIAL HEADER -->
+    <header class="d-flex flex-wrap justify-content-between align-items-end pb-5 mb-5 border-bottom" style="border-color: var(--border-hairline) !important;">
+        <div>
+            <span class="eyebrow-label" style="color: var(--accent-terracotta);">
+                National Education Spatial Intelligence • Vietnam
+            </span>
+            <h1 class="editorial-headline">Phân Cụm Điểm Thi Tiếng Anh THPT</h1>
+            <p class="editorial-subheadline mb-0">
+                Mô hình hóa đa chiều và phân vùng thống kê trên 34 Tỉnh/Thành phố
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-3 mt-4 mt-md-0">
+            <div class="text-end d-none d-sm-block pe-3 border-end" style="border-color: var(--border-hairline) !important;">
+                <span class="eyebrow-label mb-0">Phương pháp định lượng</span>
+                <span class="small fw-semibold" style="color: var(--text-primary);">K-Means &amp; Agglomerative Hierarchical</span>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 fw-medium" style="background: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border-hairline); font-size: 0.75rem;">
+                Chuẩn hóa Z-Score
+            </span>
+        </div>
+    </header>
+
+    <!-- MODULE 01: CẤU HÌNH THAM SỐ & DỮ LIỆU -->
+    <section class="surface-card surface-card-padded mb-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-baseline mb-4 pb-3 border-bottom" style="border-color: var(--border-hairline) !important;">
+            <div>
+                <span class="eyebrow-label">Bước 01 — Thiết lập mô hình</span>
+                <h2 class="section-title">Nạp Tệp Dữ Liệu &amp; Ánh Xạ Tham Số</h2>
+            </div>
+            <span class="small" style="color: var(--text-muted);">
+                Hỗ trợ định dạng <code class="num-mono text-dark">.csv</code>, <code class="num-mono text-dark">.xlsx</code>
+            </span>
+        </div>
+
+        <form id="formClustering">
+            <div class="grid-12 align-items-end">
+                <div class="col-span-3">
+                    <label class="form-label" for="inputFile">Tệp dữ liệu gốc</label>
+                    <input type="file" id="inputFile" class="form-control" accept=".csv, .xlsx, .xls" required>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="form-label" for="selectProvCol">Trường Mã tỉnh</label>
+                    <select id="selectProvCol" class="form-select" disabled required>
+                        <option value="">Chờ nạp tệp...</option>
+                    </select>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="form-label" for="selectScoreCol">Trường Điểm số</label>
+                    <select id="selectScoreCol" class="form-select" disabled required>
+                        <option value="">Chờ nạp tệp...</option>
+                    </select>
+                </div>
+
+                <div class="col-span-2">
+                    <label class="form-label" for="selectAlgo">Thuật toán</label>
+                    <select id="selectAlgo" class="form-select">
+                        <option value="kmeans">K-Means Clustering</option>
+                        <option value="hierarchical">Agglomerative Hierarchical Clustering</option>
+                    </select>
+                </div>
+
+                <div class="col-span-1" id="wrapperLinkage" style="display: none;">
+                    <label class="form-label" for="selectLinkage">Liên kết</label>
+                    <select id="selectLinkage" class="form-select">
+                        <option value="ward">Ward</option>
+                        <option value="complete">Complete</option>
+                        <option value="average">Average</option>
+                    </select>
+                </div>
+
+                <div class="col-span-1" id="wrapperK">
+                    <label class="form-label text-center d-block" for="inputK">Số cụm (k)</label>
+                    <input type="number" id="inputK" class="form-control text-center num-mono fw-semibold" value="3" min="2" max="8">
+                </div>
+
+                <div class="col-span-2 d-grid">
+                    <button type="button" id="btnRun" class="btn-primary-editorial d-flex align-items-center justify-content-center gap-2" disabled>
+                        <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        <span id="btnText">Thực thi mô hình</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- BẢNG XEM TRƯỚC DỮ LIỆU -->
+        <div id="previewContainer" class="mt-4 pt-4 border-top" style="display: none; border-color: var(--border-hairline) !important;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="eyebrow-label mb-0" style="color: var(--text-primary);">
+                    Bản ghi mẫu (5 dòng đầu tiên)
+                </span>
+                <button class="btn btn-sm btn-link text-decoration-none p-0 small" style="color: var(--text-muted);" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePreview">
+                    Ẩn / Hiện
+                </button>
+            </div>
+            <div class="collapse show" id="collapsePreview">
+                <div class="table-responsive rounded-3 border" style="border-color: var(--border-hairline) !important;">
+                    <table class="table table-editorial text-center align-middle" id="tablePreview"></table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODULE 02: KẾT QUẢ PHÂN TÍCH VĨ MÔ -->
+    <main id="resultContainer" style="display: none;">
+        <!-- DẢI CHỈ SỐ KPI EDITORIAL (LOẠI BỎ HOÀN TOÀN HỘP ICON MÀU MÈ) -->
+        <div class="kpi-grid">
+            <div class="kpi-cell">
+                <span class="eyebrow-label">Quy mô mẫu phân tích</span>
+                <div class="kpi-value" id="kpiTotalCandidates">--</div>
+                <div class="kpi-footnote">
+                    <span class="status-dot"></span>
+                    <span>Tổng số thí sinh thuộc 34 Tỉnh/Thành</span>
+                </div>
+            </div>
+
+            <div class="kpi-cell">
+                <span class="eyebrow-label">Điểm trung bình toàn quốc</span>
+                <div class="kpi-value" id="kpiNationalMean">--</div>
+                <div class="kpi-footnote">
+                    <span class="status-dot" style="background-color: var(--accent-sage);"></span>
+                    <span>Trung bình gia quyền trên thang 10.0</span>
+                </div>
+            </div>
+
+            <div class="kpi-cell">
+                <span class="eyebrow-label">Tỷ lệ điểm liệt (&le; 1.0)</span>
+                <div class="kpi-value accent-terracotta" id="kpiNationalLiet">--</div>
+                <div class="kpi-footnote">
+                    <span class="status-dot" style="background-color: var(--accent-terracotta);"></span>
+                    <span>Ngưỡng rủi ro học lực cấp quốc gia</span>
+                </div>
+            </div>
+
+            <div class="kpi-cell">
+                <span class="eyebrow-label">Tỷ lệ điểm giỏi (&ge; 8.0)</span>
+                <div class="kpi-value accent-sage" id="kpiNationalGte8">--</div>
+                <div class="kpi-footnote">
+                    <span class="status-dot" style="background-color: var(--accent-sage);"></span>
+                    <span>Nhóm năng lực ngoại ngữ vượt trội</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- WORKSPACE CHÍNH -->
+        <div class="surface-card surface-card-padded">
+            <!-- THANH ĐIỀU HƯỚNG SEGMENTED CONTROL -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-4 mb-4 border-bottom" style="border-color: var(--border-hairline) !important;">
+                <nav class="segmented-nav" id="clusterTabs" role="tablist">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-map" type="button">
+                        <span class="tab-index-num">01</span>Không gian Địa lý
+                    </button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-charts" type="button">
+                        <span class="tab-index-num">02</span>Phân phối Đa chiều
+                    </button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-eval" type="button">
+                        <span class="tab-index-num">03</span>Kiểm định Toán học
+                    </button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-table" type="button">
+                        <span class="tab-index-num">04</span>Ma trận Dữ liệu
+                    </button>
+                </nav>
+
+                <button class="btn-ghost-editorial d-flex align-items-center gap-2" onclick="exportClusteringResultsToCSV()">
+                    <i class="bi bi-arrow-down-right"></i>
+                    <span>Xuất báo cáo CSV</span>
+                </button>
+            </div>
+
+            <!-- NỘI DUNG CÁC TAB -->
+            <div class="tab-content">
+                <!-- TAB 01: BẢN ĐỒ ĐỊA LÝ -->
+                <div class="tab-pane fade show active" id="tab-map">
+                    <div class="grid-12">
+                        <div class="col-span-8">
+                            <div class="border rounded-4 overflow-hidden" style="border-color: var(--border-hairline) !important;">
+                                <div id="map"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-span-4 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="mb-4">
+                                    <span class="eyebrow-label">Bộ lọc không gian</span>
+                                    <h3 class="section-title mb-3">Phân Nhóm Cụm Học Lực</h3>
+                                    <div id="clusterFilter" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <div class="p-3 rounded-3 mb-4 small" style="background-color: var(--bg-subtle); color: var(--text-secondary);">
+                                    Di chuột lên từng địa phương trên bản đồ để xem mặt cắt thống kê. Nhấp trực tiếp vào ranh giới tỉnh để thu phóng cục bộ.
+                                </div>
+
+                                <div>
+                                    <span class="eyebrow-label">Thống kê tóm tắt</span>
+                                    <h3 class="section-title mb-3">Đặc Trưng Trọng Tâm Các Cụm</h3>
+                                    <div class="table-responsive border rounded-3" style="border-color: var(--border-hairline) !important;">
+                                        <table class="table table-editorial text-center align-middle" id="tableClusterSummary">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-start">Nhóm cụm</th>
+                                                    <th>Số tỉnh</th>
+                                                    <th>Mean</th>
+                                                    <th class="text-end">Tỷ lệ &ge; 8.0</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 02: BIỂU ĐỒ PHÂN TÍCH ĐA CHIỀU -->
+                <div class="tab-pane fade" id="tab-charts">
+                    <div class="grid-12">
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4 h-100" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartBoxplot" class="chart-card"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4 h-100" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartScatter" class="chart-card"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4 h-100" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartRadar" class="chart-card"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4 h-100" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartStackedBar" class="chart-card"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 03: CHẨN ĐOÁN MÔ HÌNH -->
+                <div class="tab-pane fade" id="tab-eval">
+                    <div id="optimalKRecommendation"></div>
+
+                    <div class="grid-12 mb-4">
+                        <div class="col-span-6">
+                            <div class="p-4 rounded-4 border" style="border-color: var(--border-hairline) !important; background: #FCFBF9;">
+                                <span class="eyebrow-label">Độ tách biệt cụm — Silhouette Coefficient</span>
+                                <div class="d-flex align-items-baseline gap-3 mt-2">
+                                    <span class="kpi-value my-0" id="valSilhouette">--</span>
+                                    <span class="small" style="color: var(--text-muted);">Miền giá trị [-1, 1] • Càng tiến về 1 cấu trúc cụm càng rõ nét</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="p-4 rounded-4 border" style="border-color: var(--border-hairline) !important; background: #FCFBF9;">
+                                <span class="eyebrow-label">Độ cô đặc nội cụm — Davies-Bouldin Index</span>
+                                <div class="d-flex align-items-baseline gap-3 mt-2">
+                                    <span class="kpi-value my-0" id="valDB">--</span>
+                                    <span class="small" style="color: var(--text-muted);">Giá trị càng thấp thể hiện khoảng cách giữa các cụm càng tối ưu</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-12">
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartElbow" class="chart-card"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="border rounded-4 p-4" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartSilhouette" class="chart-card"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-12" id="wrapperDendrogram" style="display: none;">
+                            <div class="border rounded-4 p-4" style="border-color: var(--border-hairline) !important;">
+                                <div id="chartDendrogram" class="chart-card" style="min-height: 540px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 04: BẢNG SỐ LIỆU 34 TỈNH -->
+                <div class="tab-pane fade" id="tab-table">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <input type="text" id="tableFilterInput" class="form-control" placeholder="Tìm theo tên hoặc mã tỉnh..." style="width: 280px;">
+                            <select id="tableClusterFilter" class="form-select" style="width: 190px;">
+                                <option value="all">Tất cả các cụm</option>
+                            </select>
+                        </div>
+                        <span class="eyebrow-label mb-0">Dữ liệu chi tiết 34 đơn vị hành chính</span>
+                    </div>
+
+                    <div class="table-responsive border rounded-4" style="max-height: 600px; border-color: var(--border-hairline) !important;">
+                        <table class="table table-editorial text-center align-middle" id="tableFullProvinces">
+                            <thead class="sticky-top">
+                                <tr>
+                                    <th>Mã</th>
+                                    <th class="text-start">Tỉnh / Thành phố</th>
+                                    <th>Phân cụm</th>
+                                    <th class="text-end">Quy mô</th>
+                                    <th class="text-end">Mean</th>
+                                    <th class="text-end">Median</th>
+                                    <th class="text-end">Std</th>
+                                    <th class="text-end">Q1</th>
+                                    <th class="text-end">Q3</th>
+                                    <th class="text-end">% Liệt</th>
+                                    <th class="text-end">% &lt; 5.0</th>
+                                    <th class="text-end">% &ge; 8.0</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('selectAlgo').addEventListener('change', function () {
+        const isHierarchical = this.value === 'hierarchical';
+        document.getElementById('wrapperLinkage').style.display = isHierarchical ? 'block' : 'none';
+        document.getElementById('wrapperDendrogram').style.display = isHierarchical ? 'block' : 'none';
+    });
+
+    const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabElements.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function (event) {
+            const targetId = event.target.getAttribute('data-bs-target');
+            if (targetId === '#tab-map' && typeof mapInstance !== 'undefined' && mapInstance) {
+                mapInstance.invalidateSize(true);
+            } else if (targetId === '#tab-charts' || targetId === '#tab-eval') {
+                document.querySelectorAll('.chart-card').forEach(c => {
+                    if (c.id && window.Plotly) Plotly.Plots.resize(c);
+                });
+            }
+        });
+    });
+</script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>
