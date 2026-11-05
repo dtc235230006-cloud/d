@@ -14,6 +14,20 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Allow the separately hosted Pages frontend to call this API when configured.
+@app.after_request
+def add_cors_headers(response):
+    allowed_origin = os.environ.get('CORS_ALLOWED_ORIGIN', '').rstrip('/')
+    request_origin = request.headers.get('Origin')
+
+    if allowed_origin and request_origin == allowed_origin:
+        response.headers['Access-Control-Allow-Origin'] = allowed_origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers.add('Vary', 'Origin')
+
+    return response
+
 # Giới hạn kích thước file upload tối đa: 100MB
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
@@ -156,8 +170,8 @@ def run_clustering():
 
     try:
         k = int(request.form.get('k', 3))
-        if not (2 <= k <= 8):
-            return jsonify({'error': 'Số cụm k phải nằm trong khoảng từ 2 đến 8'}), 400
+        if not (2 <= k <= 7):
+            return jsonify({'error': 'Số cụm k phải nằm trong khoảng từ 2 đến 7'}), 400
     except ValueError:
         return jsonify({'error': 'Số cụm k phải là số nguyên'}), 400
 

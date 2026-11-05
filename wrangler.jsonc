@@ -1,27 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "giaodien",
-  "main": "src/index.js",
   "compatibility_date": "2026-11-05",
-  "containers": [
-    {
-      "class_name": "FlaskAppContainer",
-      "image": "./Dockerfile",
-      "max_instances": 1
-    }
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "WEB_APP",
-        "class_name": "FlaskAppContainer"
-      }
-    ]
-  },
-  "exports": {
-    "FlaskAppContainer": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    }
-  }
+  "pages_build_output_dir": "./dist"
 }

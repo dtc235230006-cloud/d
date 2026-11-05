@@ -5,6 +5,7 @@ __pycache__/
 
 node_modules/
 .wrangler/
+dist/
 
 .env
 .env.*

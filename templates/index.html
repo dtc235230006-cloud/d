@@ -447,7 +447,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-baseline mb-4 pb-3 border-bottom" style="border-color: var(--border-hairline) !important;">
             <div>
                 <span class="eyebrow-label">Bước 01 — Thiết lập mô hình</span>
-                <h2 class="section-title">Nạp Tệp Dữ Liệu &amp; Ánh Xạ Tham Số</h2>
+                <h2 class="section-title">Nạp Tệp Dữ Liệu &amp; Thiết Lập Tham Số</h2>
             </div>
             <span class="small" style="color: var(--text-muted);">
                 Hỗ trợ định dạng <code class="num-mono text-dark">.csv</code>, <code class="num-mono text-dark">.xlsx</code>
@@ -464,14 +464,14 @@
                 <div class="col-span-2">
                     <label class="form-label" for="selectProvCol">Trường Mã tỉnh</label>
                     <select id="selectProvCol" class="form-select" disabled required>
-                        <option value="">Chờ nạp tệp...</option>
+                        <option value="">Chọn cột mã tỉnh</option>
                     </select>
                 </div>
 
                 <div class="col-span-2">
                     <label class="form-label" for="selectScoreCol">Trường Điểm số</label>
                     <select id="selectScoreCol" class="form-select" disabled required>
-                        <option value="">Chờ nạp tệp...</option>
+                        <option value="">Chọn cột điểm số</option>
                     </select>
                 </div>
 
@@ -494,7 +494,7 @@
 
                 <div class="col-span-1" id="wrapperK">
                     <label class="form-label text-center d-block" for="inputK">Số cụm (k)</label>
-                    <input type="number" id="inputK" class="form-control text-center num-mono fw-semibold" value="3" min="2" max="8">
+                    <input type="number" id="inputK" class="form-control text-center num-mono fw-semibold" value="3" min="2" max="7" step="1">
                 </div>
 
                 <div class="col-span-2 d-grid">
@@ -505,6 +505,7 @@
                 </div>
             </div>
         </form>
+        <div id="columnMappingStatus" class="small mt-3" role="status" aria-live="polite"></div>
 
         <!-- BẢNG XEM TRƯỚC DỮ LIỆU -->
         <div id="previewContainer" class="mt-4 pt-4 border-top" style="display: none; border-color: var(--border-hairline) !important;">

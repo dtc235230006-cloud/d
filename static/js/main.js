@@ -29,6 +29,7 @@ const PLOT_FONT = {
 };
 
 const PLOT_GRID_COLOR = '#EFEDE6';
+const API_BASE_URL = (window.APP_CONFIG?.apiBaseUrl || '').replace(/\/+$/, '');
 
 document.addEventListener("DOMContentLoaded", function () {
     initEventListeners();
@@ -60,21 +61,31 @@ function initEventListeners() {
 
     inputFile.addEventListener('change', async function (e) {
         const file = e.target.files[0];
+        const provinceField = document.getElementById('selectProvCol');
+        const scoreField = document.getElementById('selectScoreCol');
+        const mappingStatus = document.getElementById('columnMappingStatus');
+        btnRun.disabled = true;
+        resetColumnSelect(provinceField, 'Chọn cột mã tỉnh');
+        resetColumnSelect(scoreField, 'Chọn cột điểm số');
+        mappingStatus.textContent = '';
+        mappingStatus.className = 'small mt-3';
         if (!file) return;
 
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            const res = await fetch('/api/preview-file', { method: 'POST', body: formData });
+            const res = await fetch(`${API_BASE_URL}/api/preview-file`, { method: 'POST', body: formData });
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.error || 'Lỗi khi đọc file xem trước');
 
             if (data.columns && data.columns.length > 0) {
-                populateColumnSelects(data.columns);
+                autoMapColumns(data.columns);
                 renderPreviewTable(data.columns, data.preview_data);
-                btnRun.disabled = false;
+            } else {
+                mappingStatus.textContent = 'Không tìm thấy cột nào trong tệp. Vui lòng kiểm tra lại file.';
+                mappingStatus.classList.add('text-danger');
             }
         } catch (err) {
             alert(`Lỗi: ${err.message}`);
@@ -83,17 +94,40 @@ function initEventListeners() {
         }
     });
 
+    [provinceField, scoreField].forEach(field => {
+        field.addEventListener('change', function () {
+            const hasValidMapping = provinceField.value
+                && scoreField.value
+                && provinceField.value !== scoreField.value;
+            btnRun.disabled = !hasValidMapping;
+
+            if (hasValidMapping) {
+                mappingStatus.textContent = 'Đã chọn cột mã tỉnh và cột điểm số.';
+                mappingStatus.className = 'small mt-3 text-success';
+            } else {
+                mappingStatus.textContent = 'Vui lòng chọn hai cột khác nhau để tiếp tục.';
+                mappingStatus.className = 'small mt-3 text-warning';
+            }
+        });
+    });
+
     btnRun.addEventListener('click', async function () {
         const fileInput = document.getElementById('inputFile');
         const colProv = document.getElementById('selectProvCol').value;
         const colScore = document.getElementById('selectScoreCol').value;
         const algo = document.getElementById('selectAlgo').value;
         const kVal = document.getElementById('inputK').value;
+        const k = Number(kVal);
         const linkageElem = document.getElementById('selectLinkage');
         const linkageVal = linkageElem ? linkageElem.value : 'ward';
 
         if (!fileInput.files[0] || !colProv || !colScore) {
-            alert('Vui lòng chọn file và ánh xạ đầy đủ cột Mã tỉnh, Cột Điểm.');
+            alert('Không nhận diện được cột Mã tỉnh hoặc cột Điểm số trong tệp.');
+            return;
+        }
+        if (!Number.isInteger(k) || k < 2 || k > 7) {
+            alert('Số cụm k phải là số nguyên từ 2 đến 7.');
+            document.getElementById('inputK').focus();
             return;
         }
 
@@ -108,7 +142,7 @@ function initEventListeners() {
         formData.append('linkage', linkageVal);
 
         try {
-            const res = await fetch('/api/run-clustering', { method: 'POST', body: formData });
+            const res = await fetch(`${API_BASE_URL}/api/run-clustering`, { method: 'POST', body: formData });
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.error || 'Lỗi tính toán mô hình');
@@ -143,31 +177,88 @@ function initEventListeners() {
     });
 }
 
-// 3. TỰ ĐỘNG CHỌN CỘT & HIỂN THỊ BẢNG XEM TRƯỚC
-function populateColumnSelects(columns) {
-    const provSelect = document.getElementById('selectProvCol');
-    const scoreSelect = document.getElementById('selectScoreCol');
+// 3. TỰ NHẬN DIỆN CỘT & HIỂN THỊ BẢNG XEM TRƯỚC
+function resetColumnSelect(select, placeholder) {
+    select.replaceChildren(new Option(placeholder, ''));
+    select.value = '';
+    select.disabled = true;
+}
 
-    provSelect.innerHTML = '';
-    scoreSelect.innerHTML = '';
+function autoMapColumns(columns) {
+    const provinceField = document.getElementById('selectProvCol');
+    const scoreField = document.getElementById('selectScoreCol');
+    const status = document.getElementById('columnMappingStatus');
+    const btnRun = document.getElementById('btnRun');
+    const populateOptions = (select, placeholder) => {
+        select.replaceChildren(new Option(placeholder, ''));
+        columns.forEach(column => select.add(new Option(column, column)));
+        select.disabled = false;
+    };
 
-    columns.forEach(col => {
-        provSelect.add(new Option(col, col));
-        scoreSelect.add(new Option(col, col));
-    });
+    populateOptions(provinceField, 'Chọn cột mã tỉnh');
+    populateOptions(scoreField, 'Chọn cột điểm số');
 
-    provSelect.disabled = false;
-    scoreSelect.disabled = false;
+    const normalize = value => String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/đ/g, 'd')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    const findColumn = (aliases, fieldType) => {
+        const matches = columns.map(column => {
+            const name = normalize(column);
+            const tokens = name.split('_');
+            const matchingAlias = aliases
+                .filter(alias => name === alias || (alias.length >= 5 && name.includes(alias)))
+                .sort((a, b) => b.length - a.length)[0];
 
-    columns.forEach(c => {
-        const lower = c.toLowerCase().trim();
-        if (['tinh', 'ma_tinh', 'matinh', 'province', 'sbd', 'id'].some(k => lower.includes(k))) {
-            provSelect.value = c;
-        }
-        if (['anh', 'tieng_anh', 'tienganh', 'score', 'diem', 'ngoai_ngu'].some(k => lower.includes(k))) {
-            scoreSelect.value = c;
-        }
-    });
+            if (matchingAlias) {
+                return { column, score: matchingAlias.length + (name === matchingAlias ? 100 : 0) };
+            }
+
+            if (fieldType === 'province') {
+                const hasProvinceToken = tokens.includes('tinh') || tokens.includes('province');
+                const hasCodeToken = tokens.some(token =>
+                    ['ma', 'code', 'id', 'tp', 'thanh', 'thanhpho'].includes(token)
+                );
+                if (hasProvinceToken && hasCodeToken) return { column, score: 50 + tokens.length };
+                if (name === 'tinh' || name === 'province') return { column, score: 10 };
+            }
+
+            return null;
+        }).filter(Boolean);
+        const bestScore = Math.max(0, ...matches.map(match => match.score));
+        const bestMatches = matches.filter(match => match.score === bestScore);
+        return bestMatches.length === 1 ? bestMatches[0].column : '';
+    };
+
+    const provinceColumn = findColumn([
+        'ma_tinh_thanh_pho', 'ma_tinh_thanhpho', 'matinhthanhpho',
+        'ma_tinh_thanh', 'matinhthanh', 'ma_tinh_tp', 'matinhtp',
+        'ma_tinh', 'matinh', 'ma_tp', 'matp', 'ma_dia_phuong',
+        'ma_don_vi', 'code_tinh', 'tinh_code', 'province_id',
+        'province_code', 'id_tinh', 'province'
+    ], 'province');
+    const scoreColumn = findColumn([
+        'diem_tieng_anh', 'diem_ngoai_ngu', 'english_score',
+        'diem_thi_anh', 'diem_anh', 'tieng_anh', 'ngoai_ngu',
+        'diem_thi', 'score', 'diem'
+    ], 'score');
+
+    provinceField.value = provinceColumn;
+    scoreField.value = scoreColumn;
+    btnRun.disabled = !provinceColumn || !scoreColumn || provinceColumn === scoreColumn;
+
+    if (!provinceColumn || !scoreColumn || provinceColumn === scoreColumn) {
+        status.textContent = 'Không tự nhận diện đủ cột. Vui lòng chọn cột mã tỉnh và cột điểm số ở danh sách.';
+        status.className = 'small mt-3 text-warning';
+        return false;
+    }
+
+    status.textContent = 'Đã tự nhận diện cột mã tỉnh và cột điểm số.';
+    status.className = 'small mt-3 text-success';
+    return true;
 }
 
 function renderPreviewTable(columns, rows) {

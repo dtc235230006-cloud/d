@@ -141,9 +141,9 @@ class ExamDataProcessor:
         else 0.0
     )
 
-    # Chẩn đoán Elbow (WCSS) & Silhouette qua các k từ 2 đến min(8, N-1)
+    # Chẩn đoán Elbow (WCSS) & Silhouette qua các k từ 2 đến min(7, N-1)
     diagnostics = {'elbow_k': [], 'wcss': [], 'silhouette': []}
-    max_k = min(9, len(df_result))
+    max_k = min(8, len(df_result))
     for test_k in range(2, max_k):
       km = KMeans(n_clusters=test_k, random_state=42, n_init='auto').fit(
           X_scaled
