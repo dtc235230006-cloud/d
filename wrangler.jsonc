@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "education-spatial-analytics",
+  "name": "giaodien",
   "main": "src/index.js",
   "compatibility_date": "2026-11-05",
   "containers": [
